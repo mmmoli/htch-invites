@@ -1,29 +1,19 @@
-use self::invite_states::{DraftedInvitation, SentInvitation};
+pub use self::invite_states::{DraftedInvitation, SentInvitation};
 
 #[derive(Debug)]
-pub struct Recipient(String);
+pub struct Recipient(pub String);
 
 #[derive(Debug)]
-pub struct Subdomain(String);
+pub struct Subdomain(pub String);
 
 #[derive(Debug)]
-pub struct Invitation {
-    recipient: Recipient,
-    subdomain: Subdomain,
-}
+pub struct Invitation;
 
 impl Invitation {
     pub fn create(recipient: Recipient, subdomain: Subdomain) -> DraftedInvitation {
         DraftedInvitation {
             recipient,
             subdomain,
-        }
-    }
-
-    pub fn send(self) -> SentInvitation {
-        SentInvitation {
-            recipient: self.recipient,
-            subdomain: self.subdomain,
         }
     }
 }
@@ -36,6 +26,15 @@ pub mod invite_states {
     pub struct DraftedInvitation {
         pub(crate) recipient: Recipient,
         pub(crate) subdomain: Subdomain,
+    }
+
+    impl DraftedInvitation {
+        pub fn send(self) -> SentInvitation {
+            SentInvitation {
+                recipient: self.recipient,
+                subdomain: self.subdomain,
+            }
+        }
     }
 
     impl Invite for DraftedInvitation {
@@ -63,6 +62,15 @@ pub mod invite_states {
         pub(crate) subdomain: Subdomain,
     }
 
+    impl SentInvitation {
+        pub fn accept(self) -> AcceptedInvitation {
+            AcceptedInvitation {
+                recipient: self.recipient,
+                subdomain: self.subdomain,
+            }
+        }
+    }
+
     impl Invite for SentInvitation {
         fn recipient(&self) -> &Recipient {
             &self.recipient
@@ -83,7 +91,7 @@ pub mod invite_states {
     }
 
     #[derive(Debug)]
-    struct AcceptedInvitation {
+    pub struct AcceptedInvitation {
         recipient: Recipient,
         subdomain: Subdomain,
     }
@@ -95,6 +103,15 @@ pub mod invite_states {
 
         fn subdomain(&self) -> &Subdomain {
             &self.subdomain
+        }
+    }
+
+    impl Revokable for AcceptedInvitation {
+        fn revoke(self) -> RevokedInvitation {
+            RevokedInvitation {
+                recipient: self.recipient,
+                subdomain: self.subdomain,
+            }
         }
     }
 
