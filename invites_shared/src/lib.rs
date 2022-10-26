@@ -1,14 +1,41 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+mod invites {
+    mod traits {
+        use super::models::invite_states::RevokedInvitation;
+        use crate::{Recipient, Subdomain};
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+        trait Invite {
+            fn recipient(&self) -> &Recipient;
+            fn subdomain(&self) -> &Subdomain;
+        }
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+        trait Revokable {
+            fn revoke(self) -> RevokedInvitation;
+        }
+    }
+
+    pub mod models {
+        #[derive(Debug)]
+        pub struct Recipient(String);
+
+        #[derive(Debug)]
+        pub struct Subdomain(String);
+
+        #[derive(Debug)]
+        pub struct Invitation {
+            recipient: Recipient,
+            subdomain: Subdomain,
+        }
+
+        pub mod invite_states {
+            use super::{Recipient, Subdomain};
+
+            #[derive(Debug)]
+            pub struct RevokedInvitation {
+                recipient: Recipient,
+                subdomain: Subdomain,
+            }
+        }
     }
 }
+
+pub use invites::models::{Invitation, Recipient, Subdomain};
