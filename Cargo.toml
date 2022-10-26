@@ -1,0 +1,6 @@
+[workspace]
+members = [ 
+    "invites_shared",
+    "invites_cli",
+    "invites_api"
+]
