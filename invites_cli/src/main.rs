@@ -1,9 +1,11 @@
 mod args;
 
 use args::InvitesArgs;
-use clap::Parser;
+use clap::{error::Result, Parser};
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<()> {
     let args = InvitesArgs::parse();
     println!("{:?}", args);
+    Ok(())
 }

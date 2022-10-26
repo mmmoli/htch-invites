@@ -65,7 +65,7 @@ pub enum InvitationOperation {
 #[derive(Debug, Args)]
 pub struct CreateInvitationArgs {
     /// The email address of the Recipient.
-    pub id: String,
+    pub recipient: String,
 
     /// The Subdomain the Recipient will be invited to.
     pub subdomain: String,
