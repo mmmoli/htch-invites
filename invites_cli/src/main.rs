@@ -1,3 +1,9 @@
+mod args;
+
+use args::InvitesArgs;
+use clap::Parser;
+
 fn main() {
-    println!("Hello, world!");
+    let args = InvitesArgs::parse();
+    println!("{:?}", args);
 }
