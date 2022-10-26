@@ -6,12 +6,25 @@ pub struct Recipient(pub String);
 #[derive(Debug)]
 pub struct Subdomain(pub String);
 
+impl Subdomain {
+    pub fn new(id: &str) -> Self {
+        Self(id.to_string())
+    }
+
+    pub fn delete(_id: &str) {
+        todo!()
+    }
+}
+
 #[derive(Debug)]
 pub struct Invitation;
+
+type InvitationId = String;
 
 impl Invitation {
     pub fn create(recipient: Recipient, subdomain: Subdomain) -> DraftedInvitation {
         DraftedInvitation {
+            id: "invitation_id".to_string(),
             recipient,
             subdomain,
         }
@@ -19,11 +32,12 @@ impl Invitation {
 }
 
 pub mod invite_states {
-    use super::{Recipient, Subdomain};
+    use super::{InvitationId, Recipient, Subdomain};
     use crate::invites::traits::{Invite, Revokable};
 
     #[derive(Debug)]
     pub struct DraftedInvitation {
+        pub(crate) id: InvitationId,
         pub(crate) recipient: Recipient,
         pub(crate) subdomain: Subdomain,
     }
@@ -31,6 +45,7 @@ pub mod invite_states {
     impl DraftedInvitation {
         pub fn send(self) -> SentInvitation {
             SentInvitation {
+                id: self.id,
                 recipient: self.recipient,
                 subdomain: self.subdomain,
             }
@@ -45,11 +60,16 @@ pub mod invite_states {
         fn subdomain(&self) -> &Subdomain {
             &self.subdomain
         }
+
+        fn id(&self) -> String {
+            self.id.clone()
+        }
     }
 
     impl Revokable for DraftedInvitation {
         fn revoke(self) -> RevokedInvitation {
             RevokedInvitation {
+                id: self.id,
                 recipient: self.recipient,
                 subdomain: self.subdomain,
             }
@@ -58,6 +78,7 @@ pub mod invite_states {
 
     #[derive(Debug)]
     pub struct SentInvitation {
+        pub(crate) id: String,
         pub(crate) recipient: Recipient,
         pub(crate) subdomain: Subdomain,
     }
@@ -65,6 +86,7 @@ pub mod invite_states {
     impl SentInvitation {
         pub fn accept(self) -> AcceptedInvitation {
             AcceptedInvitation {
+                id: self.id,
                 recipient: self.recipient,
                 subdomain: self.subdomain,
             }
@@ -79,11 +101,16 @@ pub mod invite_states {
         fn subdomain(&self) -> &Subdomain {
             &self.subdomain
         }
+
+        fn id(&self) -> String {
+            self.id.clone()
+        }
     }
 
     impl Revokable for SentInvitation {
         fn revoke(self) -> RevokedInvitation {
             RevokedInvitation {
+                id: self.id,
                 recipient: self.recipient,
                 subdomain: self.subdomain,
             }
@@ -92,6 +119,7 @@ pub mod invite_states {
 
     #[derive(Debug)]
     pub struct AcceptedInvitation {
+        id: String,
         recipient: Recipient,
         subdomain: Subdomain,
     }
@@ -104,11 +132,16 @@ pub mod invite_states {
         fn subdomain(&self) -> &Subdomain {
             &self.subdomain
         }
+
+        fn id(&self) -> String {
+            self.id.clone()
+        }
     }
 
     impl Revokable for AcceptedInvitation {
         fn revoke(self) -> RevokedInvitation {
             RevokedInvitation {
+                id: self.id,
                 recipient: self.recipient,
                 subdomain: self.subdomain,
             }
@@ -117,6 +150,7 @@ pub mod invite_states {
 
     #[derive(Debug)]
     struct ExpiredInvitation {
+        id: InvitationId,
         recipient: Recipient,
         subdomain: Subdomain,
     }
@@ -129,10 +163,15 @@ pub mod invite_states {
         fn subdomain(&self) -> &Subdomain {
             &self.subdomain
         }
+
+        fn id(&self) -> String {
+            self.id.clone()
+        }
     }
 
     #[derive(Debug)]
     pub struct RevokedInvitation {
+        id: InvitationId,
         recipient: Recipient,
         subdomain: Subdomain,
     }
@@ -144,6 +183,10 @@ pub mod invite_states {
 
         fn subdomain(&self) -> &Subdomain {
             &self.subdomain
+        }
+
+        fn id(&self) -> String {
+            self.id.clone()
         }
     }
 }

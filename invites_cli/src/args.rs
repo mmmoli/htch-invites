@@ -2,7 +2,7 @@ use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
-pub struct InvitesArgs {
+pub struct Cli {
     /// First argument
     #[clap(subcommand)]
     pub entity: EntityType,

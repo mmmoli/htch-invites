@@ -1,11 +1,24 @@
 mod args;
 
-use args::InvitesArgs;
-use clap::{error::Result, Parser};
+use args::{Cli, EntityType};
+use clap::Parser;
+use invites_shared::Subdomain;
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    let args = InvitesArgs::parse();
-    println!("{:?}", args);
+async fn main() -> Result<(), ()> {
+    let cli = Cli::parse();
+
+    match &cli.entity {
+        EntityType::Subdomain(args) => match &args.operation {
+            args::SubdomainOperation::Create(args) => Subdomain::new(&args.id),
+            args::SubdomainOperation::Delete(_) => todo!(),
+        },
+        EntityType::Invitation(args) => match &args.operation {
+            args::InvitationOperation::Create(_) => todo!(),
+            args::InvitationOperation::Revoke(_) => todo!(),
+            args::InvitationOperation::Send(_) => todo!(),
+        },
+    };
+
     Ok(())
 }
