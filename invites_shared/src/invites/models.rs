@@ -1,3 +1,5 @@
+use crate::db::HtchDb;
+
 pub use self::invite_states::{DraftedInvitation, SentInvitation};
 use chrono::prelude::*;
 
@@ -23,7 +25,10 @@ pub struct Invitation;
 type InvitationId = String;
 
 impl Invitation {
-    pub fn create(recipient: Recipient, entity: Entity) -> DraftedInvitation {
+    pub fn create<T>(recipient: Recipient, entity: Entity, _db: &T) -> DraftedInvitation
+    where
+        T: HtchDb,
+    {
         DraftedInvitation {
             id: format!("{}-{}", recipient.0, entity.0),
             created_at: Utc::now(),
@@ -39,6 +44,7 @@ pub mod invite_states {
 
     use super::{Entity, InvitationId, Recipient};
     use crate::{
+        db::HtchDb,
         invites::traits::{Invite, Revokable},
         notification_services::traits::NotificationSerice,
     };
@@ -52,15 +58,22 @@ pub mod invite_states {
     }
 
     impl DraftedInvitation {
-        pub fn send(
+        #[allow(unreachable_code)]
+        pub fn send<T>(
             self,
             notification_services: &Vec<Box<dyn NotificationSerice>>,
-        ) -> anyhow::Result<SentInvitation> {
+            _db: &T,
+        ) -> anyhow::Result<SentInvitation>
+        where
+            T: HtchDb,
+        {
             for service in notification_services {
                 service
                     .send()
                     .with_context(|| format!("{} failed to send notification", service.name()))?;
             }
+
+            todo!("Save to DB");
 
             Ok(SentInvitation {
                 id: self.id,
@@ -90,7 +103,12 @@ pub mod invite_states {
     }
 
     impl Revokable for DraftedInvitation {
-        fn revoke(self) -> RevokedInvitation {
+        #[allow(unreachable_code)]
+        fn revoke<T>(self, _db: &T) -> RevokedInvitation
+        where
+            T: HtchDb,
+        {
+            todo!("Save to DB");
             RevokedInvitation {
                 id: self.id,
                 recipient: self.recipient,
@@ -109,13 +127,18 @@ pub mod invite_states {
     }
 
     impl SentInvitation {
-        pub fn accept(self) -> AcceptedInvitation {
-            AcceptedInvitation {
+        #[allow(unreachable_code)]
+        pub fn accept<T>(self, _db: &T) -> anyhow::Result<AcceptedInvitation>
+        where
+            T: HtchDb,
+        {
+            todo!("Update in DB");
+            Ok(AcceptedInvitation {
                 id: self.id,
                 recipient: self.recipient,
                 entity: self.entity,
                 created_at: Utc::now(),
-            }
+            })
         }
     }
 
@@ -138,7 +161,12 @@ pub mod invite_states {
     }
 
     impl Revokable for SentInvitation {
-        fn revoke(self) -> RevokedInvitation {
+        #[allow(unreachable_code)]
+        fn revoke<T>(self, _db: &T) -> RevokedInvitation
+        where
+            T: HtchDb,
+        {
+            todo!("Update in DB");
             RevokedInvitation {
                 id: self.id,
                 recipient: self.recipient,
@@ -175,7 +203,12 @@ pub mod invite_states {
     }
 
     impl Revokable for AcceptedInvitation {
-        fn revoke(self) -> RevokedInvitation {
+        #[allow(unreachable_code)]
+        fn revoke<T>(self, _db: &T) -> RevokedInvitation
+        where
+            T: HtchDb,
+        {
+            todo!("Update in DB");
             RevokedInvitation {
                 id: self.id,
                 recipient: self.recipient,
@@ -220,7 +253,12 @@ pub mod invite_states {
     }
 
     impl RevokedInvitation {
-        pub fn reinstate(self) -> DraftedInvitation {
+        #[allow(unreachable_code)]
+        pub fn reinstate<T>(self, _db: &T) -> DraftedInvitation
+        where
+            T: HtchDb,
+        {
+            todo!("Update in DB");
             DraftedInvitation {
                 id: self.id,
                 recipient: self.recipient,
@@ -252,6 +290,9 @@ pub mod invite_states {
 #[cfg(test)]
 mod tests {
 
+    use async_trait::async_trait;
+    use surrealdb::Response;
+
     use crate::{
         notification_services::traits::NotificationSerice, Entity, Invitation, Recipient, Revokable,
     };
@@ -268,38 +309,54 @@ mod tests {
         }
     }
 
+    struct MockDb;
+
+    #[async_trait]
+    impl crate::db::HtchDb for MockDb {
+        async fn execute(&self, _query: &str) -> anyhow::Result<Vec<Response>> {
+            Ok(vec![])
+        }
+    }
+
     #[test]
     fn create_invitation() {
+        let mock_db = MockDb;
         let recipient = Recipient(String::from("alice"));
         let entity = Entity(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, entity);
-        invitation.revoke();
+        let invitation = Invitation::create(recipient, entity, &mock_db);
+        invitation.revoke(&mock_db);
     }
 
     #[test]
     fn revoke_sent_invitation() {
+        let mock_db = MockDb;
         let recipient = Recipient(String::from("alice"));
         let entity = Entity(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, entity).send(&vec![]).unwrap();
-        invitation.revoke();
+        let invitation = Invitation::create(recipient, entity, &mock_db)
+            .send(&vec![], &mock_db)
+            .unwrap();
+        invitation.revoke(&mock_db);
     }
 
     #[test]
     fn accept_invitation() {
+        let mock_db = MockDb;
         let recipient = Recipient(String::from("alice"));
         let entity = Entity(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, entity)
-            .send(&vec![])
+        let invitation = Invitation::create(recipient, entity, &mock_db)
+            .send(&vec![], &mock_db)
             .unwrap()
-            .accept();
-        invitation.revoke();
+            .accept(&mock_db)
+            .unwrap();
+        invitation.revoke(&mock_db);
     }
 
     #[test]
     fn reinstate_invitation() {
+        let mock_db = MockDb;
         let recipient = Recipient(String::from("alice"));
         let entity = Entity(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, entity).revoke();
-        let _invitation = invitation.reinstate();
+        let invitation = Invitation::create(recipient, entity, &mock_db).revoke(&mock_db);
+        let _invitation = invitation.reinstate(&mock_db);
     }
 }

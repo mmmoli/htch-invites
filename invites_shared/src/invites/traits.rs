@@ -1,5 +1,5 @@
 use super::models::invite_states::RevokedInvitation;
-use crate::{Entity, Recipient};
+use crate::{db::HtchDb, Entity, Recipient};
 use chrono::prelude::*;
 
 pub trait Invite {
@@ -10,5 +10,7 @@ pub trait Invite {
 }
 
 pub trait Revokable {
-    fn revoke(self) -> RevokedInvitation;
+    fn revoke<T>(self, db: &T) -> RevokedInvitation
+    where
+        T: HtchDb;
 }
