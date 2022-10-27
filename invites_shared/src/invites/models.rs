@@ -24,7 +24,7 @@ type InvitationId = String;
 impl Invitation {
     pub fn create(recipient: Recipient, entity: Entity) -> DraftedInvitation {
         DraftedInvitation {
-            id: "invitation_id".to_string(),
+            id: format!("{}-{}", recipient.0, entity.0),
             recipient,
             entity,
         }
