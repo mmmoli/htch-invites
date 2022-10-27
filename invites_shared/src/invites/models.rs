@@ -1,4 +1,5 @@
 pub use self::invite_states::{DraftedInvitation, SentInvitation};
+use chrono::prelude::*;
 
 #[derive(Debug)]
 pub struct Recipient(pub String);
@@ -25,14 +26,16 @@ impl Invitation {
     pub fn create(recipient: Recipient, entity: Entity) -> DraftedInvitation {
         DraftedInvitation {
             id: format!("{}-{}", recipient.0, entity.0),
-            recipient,
+            created_at: Utc::now(),
             entity,
+            recipient,
         }
     }
 }
 
 pub mod invite_states {
     use anyhow::Context;
+    use chrono::Utc;
 
     use super::{Entity, InvitationId, Recipient};
     use crate::{
@@ -45,6 +48,7 @@ pub mod invite_states {
         pub(crate) id: InvitationId,
         pub(crate) recipient: Recipient,
         pub(crate) entity: Entity,
+        pub(crate) created_at: chrono::DateTime<chrono::Utc>,
     }
 
     impl DraftedInvitation {
@@ -62,6 +66,7 @@ pub mod invite_states {
                 id: self.id,
                 recipient: self.recipient,
                 entity: self.entity,
+                created_at: Utc::now(),
             })
         }
     }
@@ -78,6 +83,10 @@ pub mod invite_states {
         fn id(&self) -> String {
             self.id.clone()
         }
+
+        fn created_at(&self) -> chrono::DateTime<chrono::Utc> {
+            self.created_at
+        }
     }
 
     impl Revokable for DraftedInvitation {
@@ -86,6 +95,7 @@ pub mod invite_states {
                 id: self.id,
                 recipient: self.recipient,
                 entity: self.entity,
+                created_at: Utc::now(),
             }
         }
     }
@@ -95,6 +105,7 @@ pub mod invite_states {
         pub(crate) id: String,
         pub(crate) recipient: Recipient,
         pub(crate) entity: Entity,
+        created_at: chrono::DateTime<chrono::Utc>,
     }
 
     impl SentInvitation {
@@ -103,6 +114,7 @@ pub mod invite_states {
                 id: self.id,
                 recipient: self.recipient,
                 entity: self.entity,
+                created_at: Utc::now(),
             }
         }
     }
@@ -119,6 +131,10 @@ pub mod invite_states {
         fn id(&self) -> String {
             self.id.clone()
         }
+
+        fn created_at(&self) -> chrono::DateTime<chrono::Utc> {
+            self.created_at
+        }
     }
 
     impl Revokable for SentInvitation {
@@ -127,6 +143,7 @@ pub mod invite_states {
                 id: self.id,
                 recipient: self.recipient,
                 entity: self.entity,
+                created_at: Utc::now(),
             }
         }
     }
@@ -136,6 +153,7 @@ pub mod invite_states {
         id: String,
         recipient: Recipient,
         entity: Entity,
+        created_at: chrono::DateTime<chrono::Utc>,
     }
 
     impl Invite for AcceptedInvitation {
@@ -150,6 +168,10 @@ pub mod invite_states {
         fn id(&self) -> String {
             self.id.clone()
         }
+
+        fn created_at(&self) -> chrono::DateTime<chrono::Utc> {
+            self.created_at
+        }
     }
 
     impl Revokable for AcceptedInvitation {
@@ -158,6 +180,7 @@ pub mod invite_states {
                 id: self.id,
                 recipient: self.recipient,
                 entity: self.entity,
+                created_at: Utc::now(),
             }
         }
     }
@@ -167,6 +190,7 @@ pub mod invite_states {
         id: InvitationId,
         recipient: Recipient,
         entity: Entity,
+        created_at: chrono::DateTime<chrono::Utc>,
     }
 
     impl Invite for ExpiredInvitation {
@@ -181,6 +205,10 @@ pub mod invite_states {
         fn id(&self) -> String {
             self.id.clone()
         }
+
+        fn created_at(&self) -> chrono::DateTime<chrono::Utc> {
+            self.created_at
+        }
     }
 
     #[derive(Debug)]
@@ -188,6 +216,7 @@ pub mod invite_states {
         id: InvitationId,
         recipient: Recipient,
         entity: Entity,
+        created_at: chrono::DateTime<chrono::Utc>,
     }
 
     impl Invite for RevokedInvitation {
@@ -202,12 +231,31 @@ pub mod invite_states {
         fn id(&self) -> String {
             self.id.clone()
         }
+
+        fn created_at(&self) -> chrono::DateTime<chrono::Utc> {
+            self.created_at
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{Entity, Invitation, Recipient, Revokable};
+
+    use crate::{
+        notification_services::traits::NotificationSerice, Entity, Invitation, Recipient, Revokable,
+    };
+
+    struct MockNotificationService;
+
+    impl NotificationSerice for MockNotificationService {
+        fn name(&self) -> String {
+            "MockNotificationService".to_string()
+        }
+
+        fn send(&self) -> anyhow::Result<()> {
+            Ok(())
+        }
+    }
 
     #[test]
     fn create_invitation() {
@@ -221,7 +269,7 @@ mod tests {
     fn revoke_sent_invitation() {
         let recipient = Recipient(String::from("alice"));
         let entity = Entity(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, entity).send();
+        let invitation = Invitation::create(recipient, entity).send(&vec![]).unwrap();
         invitation.revoke();
     }
 
@@ -229,7 +277,10 @@ mod tests {
     fn accept_invitation() {
         let recipient = Recipient(String::from("alice"));
         let entity = Entity(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, entity).send().accept();
+        let invitation = Invitation::create(recipient, entity)
+            .send(&vec![])
+            .unwrap()
+            .accept();
         invitation.revoke();
     }
 }

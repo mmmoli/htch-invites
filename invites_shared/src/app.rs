@@ -3,7 +3,10 @@ use crate::{
     Invitation, Recipient,
 };
 
-/// An [App] manages Invitations.
+/// An [App] manages [Invitation].
+///
+/// It maintains a vec of [NotificationSerice]
+/// which is used to send notifications.
 pub struct App {
     pub(crate) name: String,
     pub(crate) notification_services: Vec<Box<dyn NotificationSerice>>,
