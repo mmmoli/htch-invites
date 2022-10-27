@@ -219,6 +219,17 @@ pub mod invite_states {
         created_at: chrono::DateTime<chrono::Utc>,
     }
 
+    impl RevokedInvitation {
+        pub fn reinstate(self) -> DraftedInvitation {
+            DraftedInvitation {
+                id: self.id,
+                recipient: self.recipient,
+                entity: self.entity,
+                created_at: Utc::now(),
+            }
+        }
+    }
+
     impl Invite for RevokedInvitation {
         fn recipient(&self) -> &Recipient {
             &self.recipient
@@ -282,5 +293,13 @@ mod tests {
             .unwrap()
             .accept();
         invitation.revoke();
+    }
+
+    #[test]
+    fn reinstate_invitation() {
+        let recipient = Recipient(String::from("alice"));
+        let entity = Entity(String::from("swimming_pool"));
+        let invitation = Invitation::create(recipient, entity).revoke();
+        let _invitation = invitation.reinstate();
     }
 }
