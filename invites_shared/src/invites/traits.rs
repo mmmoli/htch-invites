@@ -1,10 +1,10 @@
 use super::models::invite_states::RevokedInvitation;
-use crate::{Recipient, Subdomain};
+use crate::{Entity, Recipient};
 
 pub trait Invite {
     fn id(&self) -> String;
     fn recipient(&self) -> &Recipient;
-    fn subdomain(&self) -> &Subdomain;
+    fn entity(&self) -> &Entity;
 }
 
 pub trait Revokable {

@@ -1,10 +1,8 @@
+mod app;
 mod db;
-mod domains;
 mod invites;
-mod lists;
+mod notification_services;
 
-pub use invites::models::{Invitation, Recipient, Subdomain};
+pub use app::App;
+pub use invites::models::{Entity, Invitation, Recipient};
 pub use invites::traits::{Invite, Revokable};
-
-pub use domains::Domain;
-pub use lists::InvitationList;

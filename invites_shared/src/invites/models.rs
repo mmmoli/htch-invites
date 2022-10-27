@@ -4,9 +4,9 @@ pub use self::invite_states::{DraftedInvitation, SentInvitation};
 pub struct Recipient(pub String);
 
 #[derive(Debug)]
-pub struct Subdomain(pub String);
+pub struct Entity(pub String);
 
-impl Subdomain {
+impl Entity {
     pub fn new(id: &str) -> Self {
         Self(id.to_string())
     }
@@ -22,33 +22,47 @@ pub struct Invitation;
 type InvitationId = String;
 
 impl Invitation {
-    pub fn create(recipient: Recipient, subdomain: Subdomain) -> DraftedInvitation {
+    pub fn create(recipient: Recipient, entity: Entity) -> DraftedInvitation {
         DraftedInvitation {
             id: "invitation_id".to_string(),
             recipient,
-            subdomain,
+            entity,
         }
     }
 }
 
 pub mod invite_states {
-    use super::{InvitationId, Recipient, Subdomain};
-    use crate::invites::traits::{Invite, Revokable};
+    use anyhow::Context;
+
+    use super::{Entity, InvitationId, Recipient};
+    use crate::{
+        invites::traits::{Invite, Revokable},
+        notification_services::traits::NotificationSerice,
+    };
 
     #[derive(Debug)]
     pub struct DraftedInvitation {
         pub(crate) id: InvitationId,
         pub(crate) recipient: Recipient,
-        pub(crate) subdomain: Subdomain,
+        pub(crate) entity: Entity,
     }
 
     impl DraftedInvitation {
-        pub fn send(self) -> SentInvitation {
-            SentInvitation {
+        pub fn send(
+            self,
+            notification_services: &Vec<Box<dyn NotificationSerice>>,
+        ) -> anyhow::Result<SentInvitation> {
+            for service in notification_services {
+                service
+                    .send()
+                    .with_context(|| format!("{} failed to send notification", service.name()))?;
+            }
+
+            Ok(SentInvitation {
                 id: self.id,
                 recipient: self.recipient,
-                subdomain: self.subdomain,
-            }
+                entity: self.entity,
+            })
         }
     }
 
@@ -57,8 +71,8 @@ pub mod invite_states {
             &self.recipient
         }
 
-        fn subdomain(&self) -> &Subdomain {
-            &self.subdomain
+        fn entity(&self) -> &Entity {
+            &self.entity
         }
 
         fn id(&self) -> String {
@@ -71,7 +85,7 @@ pub mod invite_states {
             RevokedInvitation {
                 id: self.id,
                 recipient: self.recipient,
-                subdomain: self.subdomain,
+                entity: self.entity,
             }
         }
     }
@@ -80,7 +94,7 @@ pub mod invite_states {
     pub struct SentInvitation {
         pub(crate) id: String,
         pub(crate) recipient: Recipient,
-        pub(crate) subdomain: Subdomain,
+        pub(crate) entity: Entity,
     }
 
     impl SentInvitation {
@@ -88,7 +102,7 @@ pub mod invite_states {
             AcceptedInvitation {
                 id: self.id,
                 recipient: self.recipient,
-                subdomain: self.subdomain,
+                entity: self.entity,
             }
         }
     }
@@ -98,8 +112,8 @@ pub mod invite_states {
             &self.recipient
         }
 
-        fn subdomain(&self) -> &Subdomain {
-            &self.subdomain
+        fn entity(&self) -> &Entity {
+            &self.entity
         }
 
         fn id(&self) -> String {
@@ -112,7 +126,7 @@ pub mod invite_states {
             RevokedInvitation {
                 id: self.id,
                 recipient: self.recipient,
-                subdomain: self.subdomain,
+                entity: self.entity,
             }
         }
     }
@@ -121,7 +135,7 @@ pub mod invite_states {
     pub struct AcceptedInvitation {
         id: String,
         recipient: Recipient,
-        subdomain: Subdomain,
+        entity: Entity,
     }
 
     impl Invite for AcceptedInvitation {
@@ -129,8 +143,8 @@ pub mod invite_states {
             &self.recipient
         }
 
-        fn subdomain(&self) -> &Subdomain {
-            &self.subdomain
+        fn entity(&self) -> &Entity {
+            &self.entity
         }
 
         fn id(&self) -> String {
@@ -143,7 +157,7 @@ pub mod invite_states {
             RevokedInvitation {
                 id: self.id,
                 recipient: self.recipient,
-                subdomain: self.subdomain,
+                entity: self.entity,
             }
         }
     }
@@ -152,7 +166,7 @@ pub mod invite_states {
     struct ExpiredInvitation {
         id: InvitationId,
         recipient: Recipient,
-        subdomain: Subdomain,
+        entity: Entity,
     }
 
     impl Invite for ExpiredInvitation {
@@ -160,8 +174,8 @@ pub mod invite_states {
             &self.recipient
         }
 
-        fn subdomain(&self) -> &Subdomain {
-            &self.subdomain
+        fn entity(&self) -> &Entity {
+            &self.entity
         }
 
         fn id(&self) -> String {
@@ -173,7 +187,7 @@ pub mod invite_states {
     pub struct RevokedInvitation {
         id: InvitationId,
         recipient: Recipient,
-        subdomain: Subdomain,
+        entity: Entity,
     }
 
     impl Invite for RevokedInvitation {
@@ -181,8 +195,8 @@ pub mod invite_states {
             &self.recipient
         }
 
-        fn subdomain(&self) -> &Subdomain {
-            &self.subdomain
+        fn entity(&self) -> &Entity {
+            &self.entity
         }
 
         fn id(&self) -> String {
@@ -193,29 +207,29 @@ pub mod invite_states {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Invitation, Recipient, Revokable, Subdomain};
+    use crate::{Entity, Invitation, Recipient, Revokable};
 
     #[test]
     fn create_invitation() {
         let recipient = Recipient(String::from("alice"));
-        let subdomain = Subdomain(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, subdomain);
+        let entity = Entity(String::from("swimming_pool"));
+        let invitation = Invitation::create(recipient, entity);
         invitation.revoke();
     }
 
     #[test]
     fn revoke_sent_invitation() {
         let recipient = Recipient(String::from("alice"));
-        let subdomain = Subdomain(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, subdomain).send();
+        let entity = Entity(String::from("swimming_pool"));
+        let invitation = Invitation::create(recipient, entity).send();
         invitation.revoke();
     }
 
     #[test]
     fn accept_invitation() {
         let recipient = Recipient(String::from("alice"));
-        let subdomain = Subdomain(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, subdomain).send().accept();
+        let entity = Entity(String::from("swimming_pool"));
+        let invitation = Invitation::create(recipient, entity).send().accept();
         invitation.revoke();
     }
 }

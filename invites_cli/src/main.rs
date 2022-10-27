@@ -2,7 +2,7 @@ mod args;
 
 use args::{Cli, EntityType};
 use clap::Parser;
-use invites_shared::Subdomain;
+use invites_shared::Entity;
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
@@ -10,7 +10,7 @@ async fn main() -> Result<(), ()> {
 
     match &cli.entity {
         EntityType::Subdomain(args) => match &args.operation {
-            args::SubdomainOperation::Create(args) => Subdomain::new(&args.id),
+            args::SubdomainOperation::Create(args) => Entity::new(&args.id),
             args::SubdomainOperation::Delete(_) => todo!(),
         },
         EntityType::Invitation(args) => match &args.operation {
