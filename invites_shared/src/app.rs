@@ -49,18 +49,19 @@ impl App {
         self.notification_services.push(notification_service);
     }
 
-    pub fn accept_invitation(&self) -> anyhow::Result<()> {
+    pub async fn accept_invitation(&self) -> anyhow::Result<()> {
         // Find Invitation in Db
         let recipient = Recipient(String::from("alice"));
         let entity = Entity(String::from("swimming_pool"));
         let _invitation = Invitation::create(recipient, entity, &self.db)
+            .await?
             .send(&vec![], &self.db)
             .unwrap()
             .accept(&self.db)?;
         Ok(())
     }
 
-    pub fn send_invitation(
+    pub async fn send_invitation(
         &self,
         recipient: &str,
         entity_id: &str,
@@ -69,7 +70,8 @@ impl App {
             Recipient(recipient.to_string()),
             Entity(entity_id.to_string()),
             &self.db,
-        );
+        )
+        .await?;
 
         // Create in DB
 
@@ -91,7 +93,7 @@ mod tests {
     async fn accept_notifications() {
         let callback_config = CallbackConfig::new("http://localhost:8080");
         let app = App::new("HTCH", callback_config).await.unwrap();
-        app.send_invitation("alice", "swimming_pool").unwrap();
-        let _ = app.accept_invitation().unwrap();
+        app.send_invitation("alice", "swimming_pool").await.unwrap();
+        let _ = app.accept_invitation().await.unwrap();
     }
 }

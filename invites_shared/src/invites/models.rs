@@ -25,16 +25,21 @@ pub struct Invitation;
 type InvitationId = String;
 
 impl Invitation {
-    pub fn create<T>(recipient: Recipient, entity: Entity, _db: &T) -> DraftedInvitation
+    pub async fn create<T>(
+        recipient: Recipient,
+        entity: Entity,
+        db: &T,
+    ) -> anyhow::Result<DraftedInvitation>
     where
         T: HtchDb,
     {
-        DraftedInvitation {
+        let _responses = db.execute("").await?;
+        Ok(DraftedInvitation {
             id: format!("{}-{}", recipient.0, entity.0),
             created_at: Utc::now(),
             entity,
             recipient,
-        }
+        })
     }
 }
 
@@ -318,32 +323,38 @@ mod tests {
         }
     }
 
-    #[test]
-    fn create_invitation() {
-        let mock_db = MockDb;
-        let recipient = Recipient(String::from("alice"));
-        let entity = Entity(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, entity, &mock_db);
-        invitation.revoke(&mock_db);
-    }
-
-    #[test]
-    fn revoke_sent_invitation() {
+    #[tokio::test]
+    async fn create_invitation() {
         let mock_db = MockDb;
         let recipient = Recipient(String::from("alice"));
         let entity = Entity(String::from("swimming_pool"));
         let invitation = Invitation::create(recipient, entity, &mock_db)
+            .await
+            .unwrap();
+        invitation.revoke(&mock_db);
+    }
+
+    #[tokio::test]
+    async fn revoke_sent_invitation() {
+        let mock_db = MockDb;
+        let recipient = Recipient(String::from("alice"));
+        let entity = Entity(String::from("swimming_pool"));
+        let invitation = Invitation::create(recipient, entity, &mock_db)
+            .await
+            .unwrap()
             .send(&vec![], &mock_db)
             .unwrap();
         invitation.revoke(&mock_db);
     }
 
-    #[test]
-    fn accept_invitation() {
+    #[tokio::test]
+    async fn accept_invitation() {
         let mock_db = MockDb;
         let recipient = Recipient(String::from("alice"));
         let entity = Entity(String::from("swimming_pool"));
         let invitation = Invitation::create(recipient, entity, &mock_db)
+            .await
+            .unwrap()
             .send(&vec![], &mock_db)
             .unwrap()
             .accept(&mock_db)
@@ -351,12 +362,15 @@ mod tests {
         invitation.revoke(&mock_db);
     }
 
-    #[test]
-    fn reinstate_invitation() {
+    #[tokio::test]
+    async fn reinstate_invitation() {
         let mock_db = MockDb;
         let recipient = Recipient(String::from("alice"));
         let entity = Entity(String::from("swimming_pool"));
-        let invitation = Invitation::create(recipient, entity, &mock_db).revoke(&mock_db);
+        let invitation = Invitation::create(recipient, entity, &mock_db)
+            .await
+            .unwrap()
+            .revoke(&mock_db);
         let _invitation = invitation.reinstate(&mock_db);
     }
 }
